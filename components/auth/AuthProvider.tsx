@@ -1,75 +1,43 @@
 "use client";
 
-import {
+import React, {
   createContext,
   useContext,
   useState,
-  useEffect,
   ReactNode,
+  useEffect,
 } from "react";
-import { useRouter } from "next/navigation";
 
-// Define your user type
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-}
-
-// Define context type
+// 1️⃣ Define the shape of the auth context
 interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  user: { name: string; email: string } | null;
+  login: (userData: { name: string; email: string }) => void;
   logout: () => void;
 }
 
-// Create context
+// 2️⃣ Create the context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+// 3️⃣ Create the provider component
+export default function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<{ name: string; email: string } | null>(
+    null,
+  );
 
-export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<User | null>(null);
-  const router = useRouter();
-
-  // Check if user is already logged in on mount
+  // Optional: load user from localStorage or API on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
-  // Login function
-  const login = async (email: string, password: string) => {
-    try {
-      // Replace this with your API call
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!res.ok) throw new Error("Login failed");
-
-      const data = await res.json();
-      setUser(data.user);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      router.push("/dashboard"); // Redirect after login
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
+  const login = (userData: { name: string; email: string }) => {
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
   };
 
-  // Logout function
   const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
-    router.push("/login"); // Redirect to login page
   };
 
   return (
@@ -77,14 +45,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-// Custom hook to use auth
+// 4️⃣ Custom hook to use auth context easily
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 };
-
